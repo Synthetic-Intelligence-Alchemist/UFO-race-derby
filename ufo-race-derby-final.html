@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UFO Race Derby: Digital Card Dash</title>
+    <style>
+        /* --- Styles --- */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif;
+            background: radial-gradient(ellipse at center, #005a20 0%, #004410 70%, #003005 100%);
+            color: #eee;
+            overscroll-behavior: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 95%;
+            max-width: 1000px;
+            position: relative;
+            padding-top: 55px;
+        }
+
+        h2.game-title {
+            color: #FFD700;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        }
+
+        #game-container {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 58vh;
+            position: relative;
+            background-color: #000;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.5);
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            position: relative; /* For positioning music controls */
+        }
+
+        .ui-panel {
+            background-color: rgba(0,0,0,.75);
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.4);
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .top-info-bar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .betting-controls, .action-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        button, input[type=text], input[type=number] {
+            padding: 8px 12px;
+            border-radius: 15px;
+            border: none;
+            font-size: .9em;
+            font-weight: 700;
+            transition: transform .1s ease, background-color .2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,.3);
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        button:active {
+            transform: scale(.95);
+        }
+
+        button.bet-suit {
+            font-size: 1.3em;
+            width: 45px;
+            height: 45px;
+            line-height: 1;
+        }
+
+        button.bet-amount {
+            background-color: #4caf50;
+            color: #fff;
+        }
+
+        button#place-bet {
+            background-color: #008cba;
+            color: #fff;
+        }
+
+        button#start-race {
+            background-color: #f44336;
+            color: #fff;
+        }
+
+        button#race-again {
+            background-color: #ff9800;
+            color: #fff;
+            display: none;
+        }
+
+        button#auto-play {
+            background-color: #607d8b;
+            color: #fff;
+        }
+
+        button#draw-card-button {
+            background-color: #9c27b0;
+            color: #fff;
+        }
+
+        button.selected {
+            border: 2px solid yellow;
+        }
+
+        button:disabled {
+            background-color: #555;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+
+        input#bet-amount-input {
+            width: 60px;
+            text-align: center;
+            background-color: #eee;
+            color: #333;
+        }
+
+        #status {
+            margin-top: 3px;
+            font-weight: 700;
+            color: #ffeb3b;
+            min-height: 1.1em;
+            width: 100%;
+        }
+
+        /* Drawn Card UI Styles */
+        #drawn-card-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 2.5em;
+            background-color: rgba(255,255,255,.9);
+            color: #000;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 0 8px rgba(0,0,0,.5);
+            opacity: 0;
+            transition: opacity .3s ease;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 1.5em;
+        }
+
+        #drawn-card-display.visible {
+            opacity: 1;
+        }
+
+        .card-back-ui {
+            display: inline-block;
+            width: 0.9em;
+            height: 1.3em;
+            background-color: #224488;
+            border: 2px solid white;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .card-face-ui {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.15em;
+            min-width: 1.2em;
+            text-align: center;
+        }
+
+        .suit-heart, .suit-diamond {
+            color: red;
+        }
+
+        .suit-club, .suit-spade {
+            color: #000;
+        }
+
+        #username-prompt {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            gap: 15px;
+        }
+
+        #username-prompt.visible {
+            display: flex;
+        }
+
+        #username-prompt input {
+            padding: 12px;
+            border-radius: 5px;
+            border: none;
+            width: 200px;
+        }
+
+        #username-prompt button {
+            background-color: #4caf50;
+            color: #fff;
+        }
+
+        #leaderboard {
+            position: absolute;
+            background-color: rgba(0,0,0,.7);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.4);
+            pointer-events: auto;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: .8em;
+            z-index: 10;
+            top: 10px;
+            left: 10px;
+            width: 150px;
+        }
+
+        /* --- START CHATBOX FIX & INPUT ADDITION --- */
+        #chat {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            max-height: 160px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            font-size: 0.8em;
+            z-index: 10;
+            color: #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #chat h4 {
+            margin: 0 0 8px 0;
+            color: #FFD700;
+            font-size: 0.9em;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 4px;
+            flex-shrink: 0;
+        }
+
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            &::-webkit-scrollbar { width: 6px; }
+            &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 3px; }
+            &::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.3); border-radius: 3px; }
+            &::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.5); }
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.1);
+        }
+
+        #chat p {
+            margin: 4px 0;
+            word-wrap: break-word;
+        }
+
+        #chat span {
+            font-weight: 700;
+            color: #87CEEB;
+        }
+
+        #chat span.chat-user-system {
+            color: #FFA500;
+        }
+
+        #chat-input-area {
+            display: flex;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            padding: 5px 8px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            background-color: #eee;
+            color: #333;
+            border: 1px solid #555;
+        }
+
+        #chat-send-button {
+            padding: 5px 10px;
+            font-size: 0.85em;
+            border-radius: 10px;
+            background-color: #4CAF50;
+            color: white;
+            flex-shrink: 0;
+            height: auto;
+            line-height: 1.2;
+        }
+
+        /* --- END CHATBOX FIX --- */
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* NEW Clear Data Button */
+        #clear-data {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: #FFA500;
+            color: #333;
+            font-size: 0.8em;
+            padding: 5px 10px;
+            z-index: 15;
+        }
+
+        /* NEW Music Controls Styling */
+        #music-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 15;
+        }
+
+        #music-controls button {
+            background-color: #2196F3; /* Blue background to match the theme */
+            color: #fff;
+            padding: 6px 10px;
+            font-size: 0.8em;
+        }
+
+        @media (max-width: 768px) {
+            #clear-data { font-size: 0.7em; bottom: 60px; }
+            .top-info-bar { gap: 10px; font-size: .8em; }
+            #leaderboard { top: 5px; left: 5px; width: 100px; font-size: .7em; max-height: 80px; padding: 5px; }
+            #chat { top: 5px; right: 5px; width: 150px; font-size: .7em; max-height: 120px; padding: 8px; }
+            #chat h4 { font-size: 0.8em; margin-bottom: 5px; padding-bottom: 3px; }
+            #chat p { margin: 3px 0; }
+            #chat-input { padding: 4px 6px; font-size: 0.8em; }
+            #chat-send-button { padding: 4px 8px; font-size: 0.75em; }
+            button, input[type=text], input[type=number] { padding: 6px 10px; font-size: .8em; }
+            button.bet-suit { width: 38px; height: 38px; font-size: 1.1em; }
+            input#bet-amount-input { width: 50px; }
+            #drawn-card-display { font-size: 1.8em; bottom: 5px; left: 5px; }
+            #game-container { border-radius: 10px; }
+            #music-controls { bottom: 60px; right: 5px; }
+            #music-controls button { padding: 5px 8px; font-size: 0.7em; }
+        }
+
+        @media (max-width: 480px) {
+            #clear-data { bottom: 50px; }
+            body { align-items: flex-start; padding-top: 0px; }
+            #main-content { width: 100%; padding-top: 55px; }
+            .top-info-bar { top: 10px; }
+            #leaderboard { top: 45px; left: 5px; }
+            #chat { top: 45px; right: 5px; max-height: 100px; width: calc(100% - 115px); }
+            h2.game-title { font-size: 1.1em; margin-top: 0; margin-bottom: 5px; }
+            .betting-controls, .action-controls { gap: 5px; }
+            button, input[type=text], input[type=number] { padding: 5px 8px; font-size: .7em; }
+            button.bet-suit { width: 35px; height: 35px; font-size: 1em; }
+            #music-controls { bottom: 50px; right: 5px; }
+            #music-controls button { padding: 4px 6px; font-size: 0.65em; }
+        }
+    </style>
+    <!-- Import maps -->
+    <script type="importmap">
+      { "imports": { "three": "https://unpkg.com/three@0.161.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.161.0/examples/jsm/" } }
+    </script>
+</head>
+<body>
+    <!-- Main container -->
+    <div id="main-content">
+        <!-- Game Title -->
+        <h2 class="game-title">UFO Race Derby: Digital Card Dash</h2>
+        <!-- UI Elements -->
+        <div class="top-info-bar ui-panel">
+            <span>Username: <span id="username-display">Guest</span></span>
+            <span>Credits: $<span id="money-display">1000</span></span>
+            <span>Bet: $<span id="current-bet-display">0</span> (<span id="current-suit-display">None</span>)</span>
+        </div>
+        <div id="leaderboard" class="ui-panel"><h4>🏆 Top Pilots</h4><div id="leaderboard-list"></div></div>
+        <!-- MODIFIED Chat Panel -->
+        <div id="chat" class="ui-panel">
+            <h4>Comms Channel</h4>
+            <div id="chat-messages"></div>
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type message..." maxlength="50">
+                <button id="chat-send-button">Send</button>
+            </div>
+        </div>
+        <!-- Game Container Child -->
+        <div id="game-container">
+            <div id="drawn-card-display">
+                <span class="card-back-ui"></span>
+                <span class="card-face-ui"></span>
+            </div>
+        </div>
+        <div id="ui-controls">
+            <div id="status" class="ui-panel">Select your saucer & place bet!</div>
+            <div class="betting-controls ui-panel">
+                <span>Bet On Saucer:</span>
+                <button class="bet-suit suit-heart" data-suit="H">♥</button>
+                <button class="bet-suit suit-diamond" data-suit="D">♦</button>
+                <button class="bet-suit suit-club" data-suit="C">♣</button>
+                <button class="bet-suit suit-spade" data-suit="S">♠</button>
+                <input type="number" id="bet-amount-input" value="10" min="1">
+                <button class="bet-amount" data-amount="10">$10</button>
+                <button class="bet-amount" data-amount="50">$50</button>
+                <button class="bet-amount" data-amount="100">$100</button>
+                <button id="place-bet">Place Bet</button>
+            </div>
+            <div class="action-controls ui-panel">
+                <button id="start-race" disabled>Start Derby</button>
+                <button id="draw-card-button" disabled>Draw Card</button>
+                <button id="race-again">Race Again?</button>
+                <button id="auto-play">Auto Pilot: OFF</button>
+            </div>
+            <!-- Music Controls (Moved Here) -->
+            <div id="music-controls">
+                <button id="mute-btn">🔊 Mute</button>
+                <button id="playpause-btn">▶️ Play</button>
+                <button id="next-btn">⏭️ Next</button>
+            </div>
+        </div>
+        <!-- NEW Clear Data Button -->
+        <button id="clear-data">Clear Saved Data & Reload</button>
+    </div>
+    <!-- Username Prompt -->
+    <div id="username-prompt">
+        <h2>Enter Pilot Name</h2>
+        <input type="text" id="username-input" placeholder="Pilot Name" maxlength="10">
+        <button id="submit-username">Let's Fly!</button>
+        <button id="skip-username">Skip</button>
+    </div>
+    <!-- Confetti Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Define audio tracks (using public URLs for testing)
+        const bgTracks = [
+            new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'),
+            new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'),
+            new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3')
+        ];
+        const cheerSound = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3');
+
+        bgTracks.forEach(track => {
+            track.loop = false;
+            track.volume = 0.4;
+            track.addEventListener('ended', playNextTrack);
+        });
+        cheerSound.volume = 0.9;
+
+        let currentTrackIndex = 0;
+        let isMuted = false;
+        let isAudioUnlocked = false;
+
+        // Helper function to unlock audio after user interaction
+        function unlockAudio() {
+            if (isAudioUnlocked) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioContext = new AudioContext();
+            const source = audioContext.createBufferSource();
+            source.buffer = audioContext.createBuffer(1, 1, 22050);
+            source.connect(audioContext.destination);
+            source.start(0);
+            isAudioUnlocked = true;
+            console.log("Audio unlocked after user interaction.");
+        }
+
+        // Music control functions
+        function playNextTrack() {
+            const currentTrack = bgTracks[currentTrackIndex];
+            currentTrack.pause();
+            currentTrack.currentTime = 0; // Reset to start
+            currentTrackIndex = (currentTrackIndex + 1) % bgTracks.length;
+            const nextTrack = bgTracks[currentTrackIndex];
+            nextTrack.play().then(() => {
+                document.getElementById('playpause-btn').textContent = '⏸️ Pause';
+            }).catch(error => {
+                console.error('Error playing next track:', error);
+                statusDisplay.textContent = "Audio blocked. Use Play/Pause to start music.";
+            });
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            bgTracks.forEach(track => {
+                track.muted = isMuted;
+            });
+            cheerSound.muted = isMuted;
+            const muteBtn = document.getElementById('mute-btn');
+            muteBtn.textContent = isMuted ? '🔊 Unmute' : '🔊 Mute';
+        }
+
+        function togglePlayPause() {
+            const currentTrack = bgTracks[currentTrackIndex];
+            const playpauseBtn = document.getElementById('playpause-btn');
+            if (currentTrack.paused) {
+                unlockAudio();
+                currentTrack.play().then(() => {
+                    playpauseBtn.textContent = '⏸️ Pause';
+                    isAudioUnlocked = true;
+                }).catch(error => {
+                    console.error('Error playing audio:', error);
+                    statusDisplay.textContent = "Audio blocked. Try again after interacting.";
+                });
+            } else {
+                currentTrack.pause();
+                playpauseBtn.textContent = '▶️ Play';
+            }
+        }
+
+        // --- Config ---
+        const RACE_STEPS = 12;
+        const TRACK_LENGTH_UNITS = 18;
+        const STEP_DISTANCE = TRACK_LENGTH_UNITS / RACE_STEPS;
+        const START_LINE_X = TRACK_LENGTH_UNITS / 2;
+        const FINISH_LINE_X = -TRACK_LENGTH_UNITS / 2;
+        const TRACK_WIDTH = 8;
+        const LANE_WIDTH = TRACK_WIDTH / 4;
+        const RACER_SPEED = 0.06;
+        const CARD_DRAW_INTERVAL = 450;
+        const INITIAL_MONEY = 1000;
+        const SUITS = { H: 'Hearts', D: 'Diamonds', C: 'Clubs', S: 'Spades' };
+        const SUIT_SYMBOLS = { H: '♥', D: '♦', C: '♣', S: '♠' };
+        const SUIT_COLORS = { H: 0xff0000, D: 0xff69b4, C: 0x00dd00, S: 0x0000ff };
+        const POKER_SUIT_COLORS = { H: 0xcc0000, D: 0xcc0000, C: 0x111111, S: 0x111111 };
+        const BASE_Y = 0;
+
+        // --- State ---
+        let scene, camera, renderer, controls;
+        let racers = [];
+        let deck = [];
+        let drawnCards = [];
+        let raceInProgress = false;
+        let playerBet = { suit: null, amount: 0 };
+        let playerMoney = INITIAL_MONEY;
+        let username = "Guest";
+        let leaderboardData = [];
+        let autoPlay = false;
+        let currentRaceIntervalId = null;
+        let animationRequestId = null;
+        let usernameListenersAttached = false;
+        let raceWinner = null;
+        let laserBeams = [];
+        const WINNER_HOVER_HEIGHT = 1.5;
+        const LASER_COLOR = 0xff0000;
+        const LASER_COUNT = 3;
+        const LASER_LENGTH = 1.5;
+        const LASER_RADIUS = 0.03;
+
+        // --- UI Elements ---
+        const mainContent = document.getElementById('main-content');
+        const gameContainer = document.getElementById('game-container');
+        const moneyDisplay = document.getElementById('money-display');
+        const currentBetDisplay = document.getElementById('current-bet-display');
+        const currentSuitDisplay = document.getElementById('current-suit-display');
+        const statusDisplay = document.getElementById('status');
+        const betAmountInput = document.getElementById('bet-amount-input');
+        const placeBetButton = document.getElementById('place-bet');
+        const startRaceButton = document.getElementById('start-race');
+        const raceAgainButton = document.getElementById('race-again');
+        const autoPlayButton = document.getElementById('auto-play');
+        const drawCardButton = document.getElementById('draw-card-button');
+        const clearDataButton = document.getElementById('clear-data');
+        const betSuitButtons = document.querySelectorAll('.bet-suit');
+        const betAmountButtons = document.querySelectorAll('.bet-amount');
+        const drawnCardDisplay = document.getElementById('drawn-card-display');
+        const usernamePrompt = document.getElementById('username-prompt');
+        const usernameInput = document.getElementById('username-input');
+        const submitUsernameButton = document.getElementById('submit-username');
+        const skipUsernameButton = document.getElementById('skip-username');
+        const usernameDisplay = document.getElementById('username-display');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        // Chat UI Elements
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendButton = document.getElementById('chat-send-button');
+        const chatPanel = document.getElementById('chat');
+        // Music Control Elements
+        const muteBtn = document.getElementById('mute-btn');
+        const playpauseBtn = document.getElementById('playpause-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const confettiCtx = confettiCanvas.getContext('2d');
+        let particles = [];
+
+        // --- Helper Functions ---
+        function createSuitLabelTexture(symbol, colorHex, size = 128, bgColor = null) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const color = "#" + colorHex.toString(16).padStart(6, '0');
+            if (bgColor) {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, size, size);
+            }
+            ctx.fillStyle = color;
+            ctx.font = `bold ${size * 0.8}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, size / 2, size / 2 + size * 0.05);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        function createCheckeredTexture(hexColor1, hexColor2, size = 64, checks = 4) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const checkSize = size / checks;
+            for (let i = 0; i < checks; i++) {
+                for (let j = 0; j < checks; j++) {
+                    ctx.fillStyle = ((i + j) % 2 === 0) ? hexColor1 : hexColor2;
+                    ctx.fillRect(i * checkSize, j * checkSize, checkSize, checkSize);
+                }
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        // --- Initialization ---
+        function init() {
+            try {
+                setupScene();
+                animate();
+            } catch (error) {
+                console.error("Error during initialization:", error);
+                statusDisplay.textContent = "Initialization Error! Check console.";
+            }
+        }
+
+        // --- UFO Shape ---
+        function createUfoShape(color) {
+            const ufoGroup = new THREE.Group();
+            const bodyRadius = 0.4;
+            const bodyHeight = 0.12;
+            const bodyGeometry = new THREE.CylinderGeometry(bodyRadius, bodyRadius * 0.8, bodyHeight, 32);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: color, metalness: 0.7, roughness: 0.3 });
+            const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            bodyMesh.castShadow = true;
+            ufoGroup.add(bodyMesh);
+            const cockpitRadius = bodyRadius * 0.45;
+            const cockpitGeometry = new THREE.SphereGeometry(cockpitRadius, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+            const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0xaaddff, transparent: true, opacity: 0.7, roughness: 0.1 });
+            const cockpitMesh = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpitMesh.position.y = bodyHeight * 0.4;
+            cockpitMesh.castShadow = true;
+            ufoGroup.add(cockpitMesh);
+            const lightRadius = bodyRadius * 0.3;
+            const lightGeometry = new THREE.SphereGeometry(lightRadius, 16, 8);
+            const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+            const lightMesh = new THREE.Mesh(lightGeometry, lightMaterial);
+            lightMesh.position.y = -bodyHeight * 0.5;
+            lightMesh.scale.set(1, 0.3, 1);
+            ufoGroup.add(lightMesh);
+            return ufoGroup;
+        }
+
+        // --- Scene Setup ---
+        function setupScene() {
+            console.log("Setting up Refined Casino scene...");
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(55, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 100);
+            camera.position.set(0, 10, TRACK_WIDTH * 1.5);
+            camera.lookAt(0, 0, 0);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            gameContainer.appendChild(renderer.domElement);
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.target.set(0, 0.5, 0);
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 30;
+            controls.enablePan = true;
+            controls.panSpeed = 0.5;
+            scene.add(new THREE.AmbientLight(0x404040, 0.6));
+            const keyLight = new THREE.SpotLight(0xffe0b3, 450, 35, Math.PI / 4, 0.25, 1.5);
+            keyLight.position.set(-9, 14, 7);
+            keyLight.target.position.set(0, 0, 0);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 1024;
+            keyLight.shadow.mapSize.height = 1024;
+            keyLight.shadow.camera.near = 1;
+            keyLight.shadow.camera.far = 35;
+            keyLight.shadow.bias = -0.001;
+            scene.add(keyLight);
+            scene.add(keyLight.target);
+            const fillLight = new THREE.SpotLight(0xb3d9ff, 150, 35, Math.PI / 3.5, 0.35, 2);
+            fillLight.position.set(9, 10, -5);
+            fillLight.target.position.set(0, 0, 0);
+            scene.add(fillLight);
+            scene.add(fillLight.target);
+            const rimLight = new THREE.DirectionalLight(0xffeebb, 0.6);
+            rimLight.position.set(0, 6, -15);
+            scene.add(rimLight);
+            const feltMaterial = new THREE.MeshLambertMaterial({ color: 0x005522 });
+            const feltGeometry = new THREE.PlaneGeometry(TRACK_LENGTH_UNITS, TRACK_WIDTH);
+            const feltMesh = new THREE.Mesh(feltGeometry, feltMaterial);
+            feltMesh.rotation.x = -Math.PI / 2;
+            feltMesh.position.y = BASE_Y;
+            feltMesh.receiveShadow = true;
+            scene.add(feltMesh);
+            console.log("Felt material changed to MeshLambertMaterial for less shine.");
+            const trimHeight = 0.25;
+            const trimDepth = 0.6;
+            const trimY = BASE_Y + trimHeight / 2;
+            const trimMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.7, metalness: 0.1 });
+            const sideTrimGeo = new THREE.BoxGeometry(TRACK_LENGTH_UNITS, trimHeight, trimDepth);
+            const trimTop = new THREE.Mesh(sideTrimGeo, trimMaterial);
+            trimTop.position.set(0, trimY, -(TRACK_WIDTH / 2 + trimDepth / 2));
+            trimTop.castShadow = true;
+            trimTop.receiveShadow = true;
+            scene.add(trimTop);
+            const trimBottom = trimTop.clone();
+            trimBottom.position.z = (TRACK_WIDTH / 2 + trimDepth / 2);
+            scene.add(trimBottom);
+            const endTrimGeo = new THREE.BoxGeometry(trimDepth, trimHeight, TRACK_WIDTH + trimDepth * 2);
+            const trimLeft = new THREE.Mesh(endTrimGeo, trimMaterial);
+            trimLeft.position.set(-(TRACK_LENGTH_UNITS / 2 + trimDepth / 2), trimY, 0);
+            trimLeft.castShadow = true;
+            trimLeft.receiveShadow = true;
+            scene.add(trimLeft);
+            const trimRight = trimLeft.clone();
+            trimRight.position.x = (TRACK_LENGTH_UNITS / 2 + trimDepth / 2);
+            scene.add(trimRight);
+            const suitSymbolSize = 1.2;
+            const suitGeo = new THREE.PlaneGeometry(suitSymbolSize, suitSymbolSize);
+            const symbolX = START_LINE_X - suitSymbolSize * 0.8;
+            const symbolY = BASE_Y + 0.005;
+            Object.keys(SUIT_SYMBOLS).forEach((suit, i) => {
+                const laneCenterZ = -TRACK_WIDTH / 2 + LANE_WIDTH / 2 + i * LANE_WIDTH;
+                const texture = createSuitLabelTexture(SUIT_SYMBOLS[suit], POKER_SUIT_COLORS[suit], 256);
+                const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, alphaTest: 0.1 });
+                const mesh = new THREE.Mesh(suitGeo, material);
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.position.set(symbolX, symbolY, laneCenterZ);
+                scene.add(mesh);
+            });
+            console.log("Suit symbols enlarged further.");
+            const borderLineThickness = 0.015;
+            const borderLineWidth = 0.04;
+            const borderLineY = BASE_Y + borderLineThickness / 2 + 0.002;
+            const borderLineMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700, roughness: 0.6, metalness: 0.3 });
+            const borderLineGeometry = new THREE.BoxGeometry(TRACK_LENGTH_UNITS, borderLineThickness, borderLineWidth);
+            const borderTopZ = -(TRACK_WIDTH / 2 - borderLineWidth * 1.5);
+            const borderBottomZ = (TRACK_WIDTH / 2 - borderLineWidth * 1.5);
+            const borderLineTop = new THREE.Mesh(borderLineGeometry, borderLineMaterial);
+            borderLineTop.position.set(0, borderLineY, borderTopZ);
+            borderLineTop.receiveShadow = true;
+            scene.add(borderLineTop);
+            const borderLineBottom = new THREE.Mesh(borderLineGeometry, borderLineMaterial);
+            borderLineBottom.position.set(0, borderLineY, borderBottomZ);
+            borderLineBottom.receiveShadow = true;
+            scene.add(borderLineBottom);
+            const lineThickness = 0.02;
+            const lineWidth = 0.05;
+            const lineY = BASE_Y + lineThickness / 2 + 0.001;
+            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xB8860B, roughness: 0.7, metalness: 0.2 });
+            const lineGeometry = new THREE.BoxGeometry(TRACK_LENGTH_UNITS, lineThickness, lineWidth);
+            const lineZPositions = [-TRACK_WIDTH / 2 + LANE_WIDTH * 1, -TRACK_WIDTH / 2 + LANE_WIDTH * 2, -TRACK_WIDTH / 2 + LANE_WIDTH * 3];
+            lineZPositions.forEach(zPos => {
+                const lineMesh = new THREE.Mesh(lineGeometry, lineMaterial);
+                lineMesh.position.set(0, lineY, zPos);
+                lineMesh.receiveShadow = true;
+                scene.add(lineMesh);
+            });
+            const finishLineWidth = 0.5;
+            const finishLineY = BASE_Y + 0.006;
+            const finishLineTexture = createCheckeredTexture('#000000', '#FFFFFF', 64, 2);
+            finishLineTexture.wrapS = THREE.RepeatWrapping;
+            finishLineTexture.wrapT = THREE.RepeatWrapping;
+            const repeatV = 8;
+            finishLineTexture.repeat.set(1, repeatV);
+            const finishLineMaterial = new THREE.MeshStandardMaterial({ map: finishLineTexture, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide, transparent: false, depthWrite: true });
+            const finishLineGeo = new THREE.PlaneGeometry(finishLineWidth, TRACK_WIDTH);
+            const finishLineMesh = new THREE.Mesh(finishLineGeo, finishLineMaterial);
+            finishLineMesh.rotation.x = -Math.PI / 2;
+            finishLineMesh.position.set(FINISH_LINE_X, finishLineY, 0);
+            finishLineMesh.receiveShadow = false;
+            scene.add(finishLineMesh);
+            const outlineThickness = 0.02;
+            const outlineOffset = finishLineWidth / 2 + outlineThickness / 2;
+            const outlineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const outlineGeo = new THREE.PlaneGeometry(outlineThickness, TRACK_WIDTH);
+            const outlineBefore = new THREE.Mesh(outlineGeo, outlineMaterial);
+            outlineBefore.rotation.x = -Math.PI / 2;
+            outlineBefore.position.set(FINISH_LINE_X + outlineOffset, finishLineY + 0.001, 0);
+            scene.add(outlineBefore);
+            const outlineAfter = new THREE.Mesh(outlineGeo, outlineMaterial);
+            outlineAfter.rotation.x = -Math.PI / 2;
+            outlineAfter.position.set(FINISH_LINE_X - outlineOffset, finishLineY + 0.001, 0);
+            scene.add(outlineAfter);
+            racers = [];
+            const suitKeys = Object.keys(SUITS);
+            for (let i = 0; i < suitKeys.length; i++) {
+                const suit = suitKeys[i];
+                const ufoInstance = createUfoShape(SUIT_COLORS[suit]);
+                const laneCenterZ = -TRACK_WIDTH / 2 + LANE_WIDTH / 2 + i * LANE_WIDTH;
+                const initialY = BASE_Y + 0.3;
+                ufoInstance.position.set(START_LINE_X, initialY, laneCenterZ);
+                ufoInstance.rotation.y = -Math.PI / 2;
+                scene.add(ufoInstance);
+                ufoInstance.traverse(node => {
+                    if (node.isMesh) {
+                        node.castShadow = true;
+                    }
+                });
+                racers.push({ mesh: ufoInstance, suit: suit, logicalX: START_LINE_X, bobOffset: Math.random() * Math.PI * 2, initialY: initialY });
+            }
+            console.log("Racers created:", racers.length);
+
+            // Add starfield
+            const numStars = 1000;
+            const positions = new Float32Array(numStars * 3);
+            for (let i = 0; i < numStars; i++) {
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = 100;
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = r * Math.sin(phi) * Math.sin(theta);
+                const z = r * Math.cos(phi);
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+            }
+            const starsGeometry = new THREE.BufferGeometry();
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starsMaterial = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.05 });
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+
+            // --- Add Event Listeners ---
+            moneyDisplay.textContent = playerMoney.toFixed(2);
+            updateBetDisplay();
+            loadLeaderboard();
+            displayLeaderboard();
+            addChatMessage("System", "Welcome to the UFO Race Derby!");
+            simulateChat();
+            window.addEventListener('resize', onWindowResize);
+
+            // Betting controls
+            betSuitButtons.forEach(button => button.addEventListener('click', handleSuitSelection));
+            betAmountButtons.forEach(button => button.addEventListener('click', handleBetAmountSelection));
+            betAmountInput.addEventListener('change', handleBetAmountInput);
+            placeBetButton.addEventListener('click', handlePlaceBet);
+
+            // Action controls
+            startRaceButton.addEventListener('click', startRace);
+            raceAgainButton.addEventListener('click', handleRaceAgain);
+            autoPlayButton.addEventListener('click', toggleAutoPlay);
+            drawCardButton.addEventListener('click', handleManualDraw);
+            clearDataButton.addEventListener('click', handleClearData);
+
+            // Chat controls
+            chatSendButton.addEventListener('click', sendChatMessage);
+            chatInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    sendChatMessage();
+                }
+            });
+
+            // Music control event listeners
+            muteBtn.addEventListener('click', toggleMute);
+            playpauseBtn.addEventListener('click', togglePlayPause);
+            nextBtn.addEventListener('click', playNextTrack);
+
+            // Unlock audio on first user interaction
+            document.body.addEventListener('click', unlockAudio, { once: true });
+
+            resetRace();
+            showUsernamePrompt();
+            console.log("Scene setup complete with chat input and music control listeners.");
+        }
+
+        // --- Username Handling ---
+        function showUsernamePrompt() {
+            if (!usernameListenersAttached && submitUsernameButton && skipUsernameButton) {
+                submitUsernameButton.addEventListener('click', handleUsernameSubmit);
+                skipUsernameButton.addEventListener('click', handleUsernameSkip);
+                usernameListenersAttached = true;
+            } else if (usernameListenersAttached) {
+                console.log("Username listeners already attached.");
+            } else {
+                console.error("Could not find username prompt buttons!");
+            }
+            usernamePrompt.classList.add('visible');
+        }
+
+        function hideUsernamePrompt() {
+            usernamePrompt.classList.remove('visible');
+        }
+
+        function handleUsernameSubmit() {
+            const name = usernameInput.value.trim();
+            username = name ? name : "Pilot";
+            usernameDisplay.textContent = username;
+            hideUsernamePrompt();
+            statusDisplay.textContent = "Select your saucer & place bet!";
+        }
+
+        function handleUsernameSkip() {
+            username = "Guest";
+            usernameDisplay.textContent = username;
+            hideUsernamePrompt();
+            statusDisplay.textContent = "Select your saucer & place bet!";
+        }
+
+        // --- Deck Management ---
+        function createDeck() {
+            deck = [];
+            const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+            for (const suit of Object.keys(SUITS)) {
+                for (const rank of ranks) {
+                    deck.push(suit + rank);
+                }
+            }
+        }
+
+        function shuffleDeck() {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        // --- Betting Logic ---
+        function handleSuitSelection(event) {
+            if (raceInProgress) return;
+            playerBet.suit = event.target.dataset.suit;
+            betSuitButtons.forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+            updateBetDisplay();
+            checkCanPlaceBet();
+        }
+
+        function handleBetAmountSelection(event) {
+            if (raceInProgress) return;
+            betAmountInput.value = parseInt(event.target.dataset.amount);
+            updateBetDisplay();
+            checkCanPlaceBet();
+        }
+
+        function handleBetAmountInput() {
+            if (raceInProgress) return;
+            let amount = parseInt(betAmountInput.value);
+            if (isNaN(amount) || amount < 1) amount = 1;
+            betAmountInput.value = amount;
+            updateBetDisplay();
+            checkCanPlaceBet();
+        }
+
+        function checkCanPlaceBet() {
+            const amount = parseInt(betAmountInput.value);
+            placeBetButton.disabled = raceInProgress || !playerBet.suit || isNaN(amount) || amount <= 0 || amount > playerMoney;
+        }
+
+        function updateBetDisplay() {
+            const amount = parseInt(betAmountInput.value) || 0;
+            currentBetDisplay.textContent = playerBet.suit ? amount.toFixed(2) : '0.00';
+            currentSuitDisplay.textContent = playerBet.suit ? SUIT_SYMBOLS[playerBet.suit] : 'None';
+            currentSuitDisplay.className = playerBet.suit ? `suit-${SUITS[playerBet.suit].toLowerCase()}` : '';
+        }
+
+        function handlePlaceBet() {
+            if (raceInProgress) return;
+            const amount = parseInt(betAmountInput.value);
+            if (!playerBet.suit) {
+                statusDisplay.textContent = "Select a saucer!";
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                statusDisplay.textContent = "Invalid bet amount!";
+                return;
+            }
+            if (amount > playerMoney) {
+                statusDisplay.textContent = "Not enough credits!";
+                return;
+            }
+            playerBet.amount = amount;
+            playerMoney -= amount;
+            moneyDisplay.textContent = playerMoney.toFixed(2);
+            statusDisplay.textContent = `Bet $${amount} on ${SUIT_SYMBOLS[playerBet.suit]} saucer!`;
+            addChatMessage(username, `bets $${amount} on ${SUIT_SYMBOLS[playerBet.suit]}`);
+            setBettingActive(false);
+            startRaceButton.disabled = false;
+            updateBetDisplay();
+        }
+
+        function setBettingActive(isActive) {
+            betSuitButtons.forEach(btn => btn.disabled = !isActive);
+            betAmountButtons.forEach(btn => btn.disabled = !isActive);
+            betAmountInput.disabled = !isActive;
+            placeBetButton.disabled = !isActive;
+            if (isActive) checkCanPlaceBet();
+            else placeBetButton.disabled = true;
+        }
+
+        // --- Race Logic ---
+        function resetRace() {
+            console.log("Resetting race...");
+            if (currentRaceIntervalId) clearInterval(currentRaceIntervalId);
+            currentRaceIntervalId = null;
+            raceInProgress = false;
+            drawnCards = [];
+            if (raceWinner && raceWinner.mesh) {
+                laserBeams.forEach(laser => {
+                    if (laser.parent) laser.parent.remove(laser);
+                    if (laser.geometry) laser.geometry.dispose();
+                    if (laser.material) laser.material.dispose();
+                });
+                laserBeams = [];
+                raceWinner.mesh.scale.set(1, 1, 1);
+                const lightMesh = raceWinner.mesh.children.find(child => child.material instanceof THREE.MeshBasicMaterial && child.geometry instanceof THREE.SphereGeometry);
+                if (lightMesh) {
+                    lightMesh.material.color.setHex(0xffffaa);
+                }
+            }
+            raceWinner = null;
+            if (racers && racers.length > 0) {
+                racers.forEach(racer => {
+                    if (racer && racer.mesh) {
+                        racer.logicalX = START_LINE_X;
+                        racer.mesh.position.x = START_LINE_X;
+                        racer.mesh.position.y = racer.initialY;
+                        racer.mesh.scale.set(1, 1, 1);
+                        racer.mesh.rotation.set(0, -Math.PI / 2, 0);
+                        const lightMesh = racer.mesh.children.find(child => child.material instanceof THREE.MeshBasicMaterial && child.geometry instanceof THREE.SphereGeometry);
+                        if (lightMesh) {
+                            lightMesh.material.color.setHex(0xffffaa);
+                        }
+                    } else {
+                        console.error("Problem resetting racer:", racer);
+                    }
+                });
+            } else {
+                console.warn("Racers array empty or undefined during resetRace.");
+            }
+            drawnCardDisplay.classList.remove('visible');
+            const cardFaceElement = drawnCardDisplay.querySelector('.card-face-ui');
+            if (cardFaceElement) cardFaceElement.innerHTML = '';
+            statusDisplay.textContent = "Select your saucer & place bet!";
+            setBettingActive(true);
+            startRaceButton.disabled = true;
+            raceAgainButton.style.display = 'none';
+            drawCardButton.disabled = true;
+            checkCanPlaceBet();
+            console.log("Race reset complete.");
+        }
+
+        function startRace() {
+            unlockAudio();
+            currentTrackIndex = 0;
+            bgTracks[currentTrackIndex].play().then(() => {
+                document.getElementById('playpause-btn').textContent = '⏸️ Pause';
+            }).catch(error => {
+                console.error('Error starting music:', error);
+                statusDisplay.textContent = "Audio blocked. Use Play/Pause to start music.";
+            });
+
+            if (raceInProgress || playerBet.amount <= 0 || !playerBet.suit) {
+                statusDisplay.textContent = "Place a valid bet first!";
+                return;
+            }
+            raceInProgress = true;
+            statusDisplay.textContent = "And they're off!";
+            startRaceButton.disabled = true;
+            raceAgainButton.style.display = 'none';
+            setBettingActive(false);
+            createDeck();
+            shuffleDeck();
+            drawnCards = [];
+            racers.forEach(racer => {
+                racer.logicalX = START_LINE_X;
+            });
+            setDrawMode(autoPlay);
+        }
+
+        function setDrawMode(isAuto) {
+            if (!raceInProgress) return;
+            if (currentRaceIntervalId) {
+                clearInterval(currentRaceIntervalId);
+                currentRaceIntervalId = null;
+            }
+            drawCardButton.disabled = true;
+            if (isAuto) {
+                statusDisplay.textContent = "Race in Progress... Auto Pilot Engaged!";
+                currentRaceIntervalId = setInterval(drawCard, CARD_DRAW_INTERVAL);
+            } else {
+                statusDisplay.textContent = "Race in Progress... Draw cards to advance!";
+                drawCardButton.disabled = false;
+            }
+            console.log(`Draw mode set to ${isAuto ? 'Automatic' : 'Manual'}`);
+        }
+
+        function handleManualDraw() {
+            if (raceInProgress && !currentRaceIntervalId) {
+                drawCard();
+            } else {
+                console.log("Manual draw ignored. Race not active or Auto Pilot is ON.");
+            }
+        }
+
+        function drawCard() {
+            if (!raceInProgress) {
+                console.log("Draw card called but race ended or not started.");
+                if (currentRaceIntervalId) clearInterval(currentRaceIntervalId);
+                currentRaceIntervalId = null;
+                drawCardButton.disabled = true;
+                return;
+            }
+            if (deck.length === 0) {
+                console.log("Deck empty!");
+                if (currentRaceIntervalId) clearInterval(currentRaceIntervalId);
+                currentRaceIntervalId = null;
+                drawCardButton.disabled = true;
+                endRace(null);
+                return;
+            }
+            const card = deck.pop();
+            drawnCards.push(card);
+            const suit = card[0];
+            displayDrawnCard(card);
+            const racer = racers.find(r => r.suit === suit);
+            if (racer) {
+                racer.logicalX -= STEP_DISTANCE;
+                if (racer.logicalX <= FINISH_LINE_X) {
+                    racer.logicalX = FINISH_LINE_X;
+                    if (currentRaceIntervalId) clearInterval(currentRaceIntervalId);
+                    currentRaceIntervalId = null;
+                    drawCardButton.disabled = true;
+                    endRace(racer);
+                }
+            }
+        }
+
+        function displayDrawnCard(card) {
+            const suit = card[0];
+            const rank = card.substring(1);
+            const suitSymbol = SUIT_SYMBOLS[suit];
+            const colorClass = (suit === 'H' || suit === 'D') ? 'suit-heart' : 'suit-club';
+            const cardFaceElement = drawnCardDisplay.querySelector('.card-face-ui');
+            if (cardFaceElement) {
+                cardFaceElement.innerHTML = `<span class="${colorClass}">${suitSymbol}</span> ${rank}`;
+            } else {
+                console.error("Could not find .card-face-ui element!");
+            }
+            drawnCardDisplay.classList.add('visible');
+        }
+
+        function endRace(winner) {
+            if (!raceInProgress && raceWinner !== undefined) return;
+            raceInProgress = false;
+            if (currentRaceIntervalId) clearInterval(currentRaceIntervalId);
+            currentRaceIntervalId = null;
+            drawCardButton.disabled = true;
+            drawnCardDisplay.classList.remove('visible');
+            const cardFaceElement = drawnCardDisplay.querySelector('.card-face-ui');
+            if (cardFaceElement) cardFaceElement.innerHTML = '';
+            raceWinner = winner;
+            let winAmount = 0;
+            if (winner) {
+                const laserMaterial = new THREE.MeshBasicMaterial({ color: LASER_COLOR });
+                const laserGeometry = new THREE.CylinderGeometry(LASER_RADIUS, LASER_RADIUS, LASER_LENGTH, 8);
+                const angleStep = (Math.PI * 2) / LASER_COUNT;
+                for (let i = 0; i < LASER_COUNT; i++) {
+                    const angle = i * angleStep;
+                    const laserBeam = new THREE.Mesh(laserGeometry, laserMaterial);
+                    laserBeam.position.y = -0.2;
+                    laserBeam.rotation.z = Math.PI / 6;
+                    laserBeam.rotation.y = angle;
+                    const offset = 0.1;
+                    laserBeam.translateX(offset);
+                    laserBeam.translateY(LASER_LENGTH / 2);
+                    winner.mesh.add(laserBeam);
+                    laserBeams.push(laserBeam);
+                }
+                if (playerBet.suit === winner.suit) {
+                    winAmount = playerBet.amount * 3;
+                    playerMoney += playerBet.amount + winAmount;
+                    statusDisplay.textContent = `${SUIT_SYMBOLS[winner.suit]} saucer wins! You won $${winAmount.toFixed(2)}!`;
+                    triggerConfetti();
+                    updateLeaderboard(username, true);
+                    addChatMessage("System", `${username} won $${winAmount.toFixed(2)} betting on ${SUIT_SYMBOLS[winner.suit]}!`);
+                } else {
+                    statusDisplay.textContent = `${SUIT_SYMBOLS[winner.suit]} saucer wins! You lost $${playerBet.amount.toFixed(2)}.`;
+                    updateLeaderboard(username, false);
+                    addChatMessage("System", `${SUIT_SYMBOLS[winner.suit]} won the derby.`);
+                }
+            } else {
+                statusDisplay.textContent = "Derby ended unexpectedly. Bet returned.";
+                playerMoney += playerBet.amount;
+                addChatMessage("System", `Derby ended without a clear winner.`);
+                raceWinner = null;
+            }
+            moneyDisplay.textContent = playerMoney.toFixed(2);
+            playerBet = { suit: null, amount: 0 };
+            updateBetDisplay();
+            displayLeaderboard();
+            raceAgainButton.style.display = 'inline-block';
+            startRaceButton.disabled = true;
+            if (autoPlay) {
+                statusDisplay.textContent += " Auto-piloting again soon...";
+                setTimeout(() => {
+                    if (autoPlay) handleRaceAgain(true);
+                }, 2000);
+            }
+        }
+
+        function handleRaceAgain(isAutoPlayTrigger = false) {
+            if (raceInProgress) {
+                console.warn("handleRaceAgain called while race in progress.");
+                return;
+            }
+            if (playerMoney <= 0) {
+                statusDisplay.textContent = "Out of credits! Refresh to restart.";
+                raceAgainButton.disabled = true;
+                autoPlay = false;
+                autoPlayButton.textContent = `Auto Pilot: OFF`;
+                autoPlayButton.style.backgroundColor = '#607D8B';
+                return;
+            }
+            resetRace();
+            if (isAutoPlayTrigger && autoPlay) {
+                const randomSuit = Object.keys(SUITS)[Math.floor(Math.random() * 4)];
+                const autoBetAmount = Math.min(10, playerMoney > 0 ? 10 : 0);
+                if (autoBetAmount > 0 && autoBetAmount <= playerMoney) {
+                    playerBet.suit = randomSuit;
+                    playerBet.amount = autoBetAmount;
+                    playerMoney -= autoBetAmount;
+                    moneyDisplay.textContent = playerMoney.toFixed(2);
+                    statusDisplay.textContent = `Auto-bet $${autoBetAmount} on ${SUIT_SYMBOLS[randomSuit]} saucer!`;
+                    updateBetDisplay();
+                    setBettingActive(false);
+                    startRaceButton.disabled = false;
+                    addChatMessage("System", `Auto-piloting bet $${autoBetAmount} on ${SUIT_SYMBOLS[randomSuit]}`);
+                    setTimeout(startRace, 500);
+                } else {
+                    statusDisplay.textContent = "Auto Pilot needs credits! Place bet manually.";
+                    autoPlay = false;
+                    autoPlayButton.textContent = `Auto Pilot: OFF`;
+                    autoPlayButton.style.backgroundColor = '#607D8B';
+                }
+            } else {
+                statusDisplay.textContent = "Select your saucer & place bet!";
+            }
+        }
+
+        function toggleAutoPlay() {
+            autoPlay = !autoPlay;
+            autoPlayButton.textContent = `Auto Pilot: ${autoPlay ? 'ON' : 'OFF'}`;
+            autoPlayButton.style.backgroundColor = autoPlay ? '#4CAF50' : '#607D8B';
+            if (raceInProgress) {
+                setDrawMode(autoPlay);
+            } else if (autoPlay && raceAgainButton.style.display === 'inline-block') {
+                handleRaceAgain(true);
+            }
+        }
+
+        // --- NEW Clear Data Handler ---
+        function handleClearData() {
+            if (confirm("Are you sure you want to clear all saved leaderboard data? This cannot be undone.")) {
+                console.log("Clearing leaderboard data...");
+                localStorage.removeItem('cosmicDerbyLeaderboard');
+                console.log("Reloading page...");
+                location.reload();
+            }
+        }
+
+        // --- Animation & Rendering ---
+        function animate() {
+            animationRequestId = requestAnimationFrame(animate);
+            const time = Date.now() * 0.002;
+            const winnerTimeFactor = Date.now() * 0.005;
+            if (racers && racers.length > 0) {
+                racers.forEach(racer => {
+                    if (racer && racer.mesh) {
+                        if (racer === raceWinner) {
+                            const targetY = BASE_Y + WINNER_HOVER_HEIGHT;
+                            racer.mesh.position.y += (targetY - racer.mesh.position.y) * 0.03;
+                            const pulseAmount = Math.sin(winnerTimeFactor * 2.5) * 0.08 + 1.0;
+                            racer.mesh.scale.set(pulseAmount, pulseAmount, pulseAmount);
+                            racer.mesh.rotation.y += 0.07;
+                            if (racer.mesh.children.length > 2) {
+                                const lightMesh = racer.mesh.children[2];
+                                if (lightMesh && lightMesh.material) {
+                                    const flashState = Math.floor(winnerTimeFactor * 4) % 2 === 0;
+                                    lightMesh.material.color.setHex(flashState ? 0xffffff : 0xffffaa);
+                                }
+                            }
+                            const targetX = FINISH_LINE_X;
+                            if (Math.abs(racer.mesh.position.x - targetX) > 0.01) {
+                                racer.mesh.position.x += (targetX - racer.mesh.position.x) * RACER_SPEED * 0.5;
+                            } else {
+                                racer.mesh.position.x = targetX;
+                            }
+                        } else {
+                            const currentX = racer.mesh.position.x;
+                            const targetX = racer.logicalX;
+                            if (raceInProgress || targetX > FINISH_LINE_X + STEP_DISTANCE * 0.5) {
+                                racer.mesh.position.x += (targetX - currentX) * RACER_SPEED;
+                            } else {
+                                racer.mesh.position.x = Math.max(FINISH_LINE_X, racer.mesh.position.x);
+                            }
+                            racer.mesh.position.y = racer.initialY + Math.sin(time * 3.5 + racer.bobOffset) * 0.08;
+                            racer.mesh.rotation.z = Math.sin(time * 1.8 + racer.bobOffset * 1.5) * 0.1;
+                            racer.mesh.rotation.x = Math.cos(time * 2.2 + racer.bobOffset * 0.8) * 0.08;
+                            racer.mesh.rotation.y = -Math.PI / 2;
+                            racer.mesh.scale.set(1, 1, 1);
+                            if (racer.mesh.children.length > 2) {
+                                const lightMesh = racer.mesh.children[2];
+                                if (lightMesh && lightMesh.material) {
+                                    lightMesh.material.color.setHex(0xffffaa);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            if (controls) controls.update();
+            if (scene && camera && renderer) {
+                renderer.render(scene, camera);
+            }
+            updateConfetti();
+            drawConfetti();
+        }
+
+        function onWindowResize() {
+            const width = gameContainer.clientWidth;
+            const height = gameContainer.clientHeight;
+            if (width === 0 || height === 0 || !camera || !renderer) return;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        }
+
+        // --- Leaderboard ---
+        function loadLeaderboard() {
+            const storedData = localStorage.getItem('cosmicDerbyLeaderboard');
+            leaderboardData = storedData ? JSON.parse(storedData) : [];
+        }
+
+        function saveLeaderboard() {
+            localStorage.setItem('cosmicDerbyLeaderboard', JSON.stringify(leaderboardData));
+        }
+
+        function updateLeaderboard(playerName, didWin) {
+            if (playerName === "Guest") return;
+            if (didWin) {
+                let playerEntry = leaderboardData.find(entry => entry.name === playerName);
+                if (playerEntry) playerEntry.wins += 1;
+                else leaderboardData.push({ name: playerName, wins: 1 });
+                leaderboardData.sort((a, b) => b.wins - a.wins);
+                leaderboardData = leaderboardData.slice(0, 10);
+                saveLeaderboard();
+            }
+        }
+
+        function displayLeaderboard() {
+            leaderboardList.innerHTML = '';
+            if (leaderboardData.length === 0) {
+                leaderboardList.innerHTML = 'No scores yet!';
+                return;
+            }
+            const ol = document.createElement('ol');
+            ol.style.paddingLeft = '15px';
+            ol.style.margin = '0';
+            leaderboardData.forEach(entry => {
+                const li = document.createElement('li');
+                li.textContent = `${entry.name}: ${entry.wins} wins`;
+                ol.appendChild(li);
+            });
+            leaderboardList.appendChild(ol);
+        }
+
+        // --- Chat ---
+        function addChatMessage(user, message) {
+            const p = document.createElement('p');
+            const userSpan = document.createElement('span');
+            userSpan.textContent = `${user}: `;
+            userSpan.classList.add(user === "System" ? 'chat-user-system' : 'chat-user-pilot');
+            p.appendChild(userSpan);
+            p.appendChild(document.createTextNode(message));
+            chatMessages.appendChild(p);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            const message = chatInput.value.trim();
+            if (message) {
+                addChatMessage(username, message);
+                chatInput.value = '';
+            }
+        }
+
+        function simulateChat() {
+            setInterval(() => {
+                const fakeUsers = ["CmdrZap", "StarPilot", "GalaxyRacer", "Cosmo", "Nova", "Zorp", "Gleeb"];
+                const fakeMessages = ["Go ♥!", "Come on ♦!", "♣ FTW!", "♠ looking fast!", "Nice bet!", "Close one!", "My saucer needs boost!", "Warp speed!", "Zooooom!", "Abduct the finish line!", "Engage thrusters!"];
+                if (!raceInProgress && Math.random() < 0.25) {
+                    addChatMessage(fakeUsers[Math.floor(Math.random() * fakeUsers.length)], fakeMessages[Math.floor(Math.random() * fakeMessages.length)]);
+                }
+            }, 6000);
+        }
+
+        // --- Confetti Effect ---
+        function triggerConfetti() {
+            particles = [];
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+            const numParticles = 200;
+            const colors = Object.values(SUIT_COLORS).concat([0xffff00, 0x00ffff, 0xffa500]);
+            for (let i = 0; i < numParticles; i++) {
+                particles.push({
+                    x: Math.random() * confettiCanvas.width,
+                    y: -Math.random() * confettiCanvas.height * 0.5,
+                    size: Math.random() * 6 + 3,
+                    speedX: Math.random() * 8 - 4,
+                    speedY: Math.random() * 5 + 3,
+                    color: '#' + colors[Math.floor(Math.random() * colors.length)].toString(16).padStart(6, '0'),
+                    rotation: Math.random() * 360,
+                    rotationSpeed: Math.random() * 10 - 5
+                });
+            }
+        }
+
+        function updateConfetti() {
+            particles.forEach((p, index) => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+                p.rotation += p.rotationSpeed;
+                p.speedY += 0.1;
+                p.speedX *= 0.99;
+                if (p.y > confettiCanvas.height) particles.splice(index, 1);
+            });
+        }
+
+        function drawConfetti() {
+            confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            particles.forEach(p => {
+                confettiCtx.save();
+                confettiCtx.translate(p.x + p.size / 2, p.y + p.size / 2);
+                confettiCtx.rotate(p.rotation * Math.PI / 180);
+                confettiCtx.fillStyle = p.color;
+                confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                confettiCtx.restore();
+            });
+        }
+
+        // --- Start ---
+        init();
+    </script>
+</body>
+</html>
