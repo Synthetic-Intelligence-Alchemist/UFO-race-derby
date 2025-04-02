@@ -85,11 +85,17 @@
 
         .betting-controls, .action-controls {
             display: flex;
-            gap: 8px;
-            align-items: center;
             flex-wrap: wrap;
             justify-content: center;
+            gap: 8px;
             width: 100%;
+        }
+
+        .betting-controls > *,
+        .action-controls > * {
+            flex: 1 1 90px;
+            max-width: 130px;
+            min-width: 70px;
         }
 
         button, input[type=text], input[type=number] {
